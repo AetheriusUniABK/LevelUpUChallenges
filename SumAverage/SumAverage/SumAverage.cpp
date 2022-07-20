@@ -8,7 +8,7 @@ int main()
 {
     //cout << "Hello World!\n";
     int sum = 0;
-    int avg = 0;
+    float avg = 0;
     int one = 0;
     int two = 0;
     int three = 0;
@@ -21,7 +21,7 @@ int main()
     cin >> three;
 
     sum = one + two + three;
-    avg = (int)(one + two + three) / 3;
+    avg = sum / 3.0f;
 
     cout << "The sum is " << sum << endl;
     cout << "The average is " << avg << endl;
