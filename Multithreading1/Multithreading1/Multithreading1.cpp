@@ -1,50 +1,104 @@
-// Multithreading1.cpp : This file contains the 'main' function. Program execution begins and ends there.
+// Multithreading2.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 #include <iostream>
 #include <thread>
-using std::cout;
-using std::endl;
-using std::thread;
-using std::cin;
+#include <chrono>
 
-//bool ShouldEndThread = false;
-
-int ThreadVar = 0;
+using namespace std;
 
 bool DidQuit = false;
+bool ShouldDecrementLife = false;
 
-void HelloWorldThread()
+struct Character
 {
-    //cout << "Hello World Thread" << endl;
+    float Position = 0.0f;
+    int Score = 0;
+    int Lives = 1;
+
+    void DisplayStats()
+    {
+        cout << "Lives: " << Lives << endl;
+    }
+};
+
+Character Player;
+
+void UpdateCharacter1()
+{
     while (!DidQuit)
     {
-        ThreadVar++;
-        if (ThreadVar > 1000)
+        if (ShouldDecrementLife)
         {
-            ThreadVar = 0;  
+            if (Player.Lives > 0)
+            {
+                //the two lines below essentially do the same thing
+                //this_thread::sleep_for(chrono::milliseconds(500));
+                //this_thread::yield();
+                --Player.Lives;
+            }
         }
     }
 }
 
-int main()
+void UpdateCharacter2()
 {
-    cout << "Hello World!" << endl;
-    char UserInput;
-    thread Hello(HelloWorldThread);
-    
     while (!DidQuit)
     {
-        cout << "Enter any key to display the counter" << endl;
-        cout << "Enter 'q' to quit" << endl;
-        cin >> UserInput;
-        DidQuit = (UserInput == 'q');
-        cout << "ThreadVar: " << ThreadVar << endl;
+        if (ShouldDecrementLife)
+        {
+            if (Player.Lives > 0)
+            {
+                //the two lines below essentially do the same thing
+                //this_thread::sleep_for(chrono::milliseconds(500));
+                //this_thread::yield();
+                --Player.Lives;
+            }
+        }
     }
-
-    Hello.join();
-    
-    
 }
 
+void ProcessInput()
+{
+    while (!DidQuit)
+    {
+        cout << "'a' to decrement player life" << endl;
+        cout << "'d' to display player stats" << endl;
+        cout << "'q' to quit" << endl;
+
+        char UserInput;
+        cin >> UserInput;
+
+        switch (UserInput)
+        {
+        case 'a':
+            ShouldDecrementLife = true;
+            break;
+        case 'd':
+            Player.DisplayStats();
+            break;
+        case 'q':
+            DidQuit = true;
+            break;
+        default:
+            break;
+        }
+
+        DidQuit = (UserInput == 'q');
+    }
+}
+
+
+int main()
+{
+    thread InputHandler(ProcessInput);
+    thread CharacterUpdate1(UpdateCharacter1);
+    thread CharacterUpdate2(UpdateCharacter2);
+
+    InputHandler.join();
+    CharacterUpdate1.join();
+    CharacterUpdate2.join();
+
+    return 0;
+}
 
