@@ -129,14 +129,11 @@ int main(int argc, char** argv)
                         //cin >> myMessage;
                         /* Create a reliable packet of size 7 containing "packet\0" */
                         ENetPacket* packet = enet_packet_create(myMessage.c_str(),
-                            strlen(myMessage.c_str()) + 1,
+                            myMessage.length() + 1,
                             ENET_PACKET_FLAG_RELIABLE);
 
                         enet_host_broadcast(client, 0, packet);
-                        //enet_peer_send(event.peer, 0, packet);
 
-                        /* One could just use enet_host_service() instead. */
-                        //enet_host_service();
                         enet_host_flush(client);
                     }
                 }
