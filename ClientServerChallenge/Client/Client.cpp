@@ -29,6 +29,11 @@ containing hello
 #include <enet/enet.h>
 
 #include <iostream>
+#include <string>
+
+//#include "SendProcessor.h"
+#include <thread>
+
 using namespace std;
 
 ENetHost* client = nullptr;
@@ -44,6 +49,31 @@ bool CreateClient()
     return client != nullptr;
 }
 
+void MessageSend(string username)
+{
+    string myMessage;
+
+    while (1)
+    {
+        cout << username;
+        getline(cin, myMessage);
+        myMessage.insert(0, username);
+        myMessage += "\n";
+
+        /* Create a reliable packet of size 7 containing "packet\0" */
+        ENetPacket* packet = enet_packet_create(myMessage.c_str(),
+            myMessage.length() + 1,
+            ENET_PACKET_FLAG_RELIABLE);
+
+        enet_host_broadcast(client, 0, packet);
+
+        //enet_packet_destroy(packet);
+
+        enet_host_flush(client);
+    }
+    
+}
+
 int main(int argc, char** argv)
 {
     if (enet_initialize() != 0)
@@ -54,11 +84,18 @@ int main(int argc, char** argv)
     }
     atexit(enet_deinitialize);
 
-    cout << "2) Create Client " << endl;
-    int UserInput;
-    cin >> UserInput;
+    string username;
 
-    if (UserInput == 2)
+    cout << "Enter your desired name for this session: ";
+    getline(cin, username);
+    username += ": ";
+
+    cout << "2) Create Client " << endl;
+    string UserInput;
+    //cin >> UserInput;
+    getline(cin, UserInput);
+
+    if (UserInput == "2")
     {
         if (!CreateClient())
         {
@@ -70,9 +107,11 @@ int main(int argc, char** argv)
         ENetAddress address;
         ENetEvent event;
         ENetPeer* peer;
+
         /* Connect to some.server.net:1234. */
         enet_address_set_host(&address, "127.0.0.1");
         address.port = 1234;
+
         /* Initiate the connection, allocating the two channels 0 and 1. */
         peer = enet_host_connect(client, &address, 2, 0);
         if (peer == NULL)
@@ -86,6 +125,7 @@ int main(int argc, char** argv)
             event.type == ENET_EVENT_TYPE_CONNECT)
         {
             cout << "Connection to 127.0.0.1:1234 succeeded." << endl;
+            
         }
         else
         {
@@ -96,13 +136,13 @@ int main(int argc, char** argv)
             cout << "Connection to 127.0.0.1:1234 failed." << endl;
         }
 
+        thread FirstThread(MessageSend, username);
+        FirstThread.detach();
+
         while (1)
         {
-            ENetEvent event;
-
-            
-            /* Wait up to 1000 milliseconds for an event. */
-            while (enet_host_service(client, &event, 1000) > 0)
+            /* Wait up to 10 milliseconds for an event. */
+            while (enet_host_service(client, &event, 10) > 0)
             {
                 switch (event.type)
                 {
@@ -114,28 +154,17 @@ int main(int argc, char** argv)
                     event.peer -> data,
                     event.channelID);
                     */
-                    string myMessage;
-                    cin >> myMessage;
-                    
-                    /* Create a reliable packet of size 7 containing "packet\0" */
-                    ENetPacket* packet = enet_packet_create(event.packet->data,
-                        event.packet->dataLength + 1,
-                        ENET_PACKET_FLAG_RELIABLE);
-                    /* Clean up the packet now that we're done using it. */
+                    cout << (char*)event.packet->data << endl;
                     enet_packet_destroy(event.packet);
+                    
 
-                    {
-                        
-                        //cin >> myMessage;
-                        /* Create a reliable packet of size 7 containing "packet\0" */
-                        ENetPacket* packet = enet_packet_create(myMessage.c_str(),
-                            myMessage.length() + 1,
-                            ENET_PACKET_FLAG_RELIABLE);
+                    /* {
+                        SendMessage(username)
+                        }*/
+                    break;
 
-                        enet_host_broadcast(client, 0, packet);
-
-                        enet_host_flush(client);
-                    }
+                default:
+                    break;
                 }
             }
         }
@@ -149,6 +178,8 @@ int main(int argc, char** argv)
     {
         enet_host_destroy(client);
     }
+
+    
 
     return EXIT_SUCCESS;
 }

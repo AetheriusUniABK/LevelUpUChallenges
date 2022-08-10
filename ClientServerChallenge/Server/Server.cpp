@@ -51,10 +51,14 @@ containing hello
 #include <enet/enet.h>
 
 #include <iostream>
+#include <string>
+
+#include <thread>
 using namespace std;
 
 ENetAddress address;
 ENetHost* server = nullptr;
+ENetEvent event;
 
 bool CreateServer()
 {
@@ -73,6 +77,30 @@ bool CreateServer()
     return server != nullptr;
 }
 
+void MessageSend(string username)
+{
+    string myMessage;
+
+    while (1)
+    {
+        cout << username;
+        getline(cin, myMessage);
+        myMessage.insert(0, username);
+        myMessage += "\n";
+
+        /* Create a reliable packet of size 7 containing "packet\0" */
+        ENetPacket* packet = enet_packet_create(myMessage.c_str(),
+            myMessage.length() + 1,
+            ENET_PACKET_FLAG_RELIABLE);
+
+        enet_host_broadcast(server, 0, packet);
+
+        //enet_packet_destroy(packet);
+
+        enet_host_flush(server);
+    }
+    
+}
 
 int main(int argc, char** argv)
 {
@@ -84,14 +112,18 @@ int main(int argc, char** argv)
     }
     atexit(enet_deinitialize);
 
+    string serverName;
 
+    cout << "Enter your desired name for this session: ";
+    getline(cin, serverName);
+    serverName += ": ";
 
     cout << "1) Create Server " << endl;
 
-    int UserInput;
-    cin >> UserInput;
+    string UserInput;
+    getline(cin, UserInput);
 
-    if (UserInput == 1)
+    if (UserInput == "1")
     {
         if (!CreateServer())
         {
@@ -100,51 +132,62 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
+        thread FirstThread(MessageSend, serverName);
+        FirstThread.detach();
+
         while (1)
         {
-            ENetEvent event;
+
             /* Wait up to 1000 milliseconds for an event. */
             while (enet_host_service(server, &event, 1000) > 0)
             {
                 switch (event.type)
                 {
-                case ENET_EVENT_TYPE_CONNECT:
-                    cout << "A new client connected from "
-                        << event.peer->address.host
-                        << ":" << event.peer->address.port
-                        << endl;
-                    /* Store any relevant client information here. */
-                    event.peer->data = (void*)("Client information");
+                    case ENET_EVENT_TYPE_CONNECT:
+                        cout << "A new client connected from "
+                            << event.peer->address.host
+                            << ":" << event.peer->address.port
+                            << endl;
+                        /* Store any relevant client information here. */
+                        event.peer->data = (void*)("Client information");
 
-                    // added scope because you can't create things in a case statement
-                    {
-                        string myMessage = "Please enter your username: ";
+                        // added scope because you can't create things in a case statement
+                        {
+                            /*
+                            string myMessage = "Please enter your username: ";
 
-                        ENetPacket* packet = enet_packet_create(myMessage.c_str(),
-                            myMessage.length() + 1,
-                            ENET_PACKET_FLAG_RELIABLE);
+                            ENetPacket* packet = enet_packet_create(myMessage.c_str(),
+                                myMessage.length() + 1,
+                                ENET_PACKET_FLAG_RELIABLE);
 
 
-                        enet_host_broadcast(server, 0, packet);
+                            enet_host_broadcast(server, 0, packet);
 
-                        enet_host_flush(server);
-                    }
-                    break;
-                case ENET_EVENT_TYPE_RECEIVE:
-                    cout << "A packet of length "
-                        << event.packet->dataLength << endl
-                        << "containing " << (char*)event.packet->data
-                        << endl;
+                            enet_host_flush(server);
+                            */
+                        }
+                        break;
 
-                /* Clean up the packet now that we're done using it. */
-                    enet_packet_destroy(event.packet);
+                    case ENET_EVENT_TYPE_RECEIVE:
+                        /*cout << "A packet of length "
+                            << event.packet->dataLength << endl
+                            << "containing " << (char*)event.packet->data
+                            << endl;
+                            */
+                        cout << (char*)event.packet->data << endl;
+                    /* Clean up the packet now that we're done using it. */
+                        enet_packet_destroy(event.packet);
 
-                    break;
+                        break;
 
-                case ENET_EVENT_TYPE_DISCONNECT:
-                    cout << (char*)event.peer->data << "disconnected." << endl;
-                    /* Reset the peer's client information. */
-                    event.peer->data = NULL;
+                    case ENET_EVENT_TYPE_DISCONNECT:
+                        cout << (char*)event.peer->data << " disconnected." << endl;
+                        /* Reset the peer's client information. */
+                        event.peer->data = NULL;
+                        break;
+
+                    default:
+                        break;
                 }
             }
         }
