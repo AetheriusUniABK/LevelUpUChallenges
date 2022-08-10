@@ -49,16 +49,18 @@ bool CreateClient()
     return client != nullptr;
 }
 
+string myMessage;
+
 void MessageSend(string username)
 {
-    string myMessage;
+    //string myMessage;
 
     while (1)
     {
         cout << username;
-        getline(cin, myMessage);
+        getline(cin, myMessage, '\n');
         myMessage.insert(0, username);
-        myMessage += "\n";
+        myMessage.insert(0,"\r");
 
         /* Create a reliable packet of size 7 containing "packet\0" */
         ENetPacket* packet = enet_packet_create(myMessage.c_str(),
@@ -154,9 +156,13 @@ int main(int argc, char** argv)
                     event.peer -> data,
                     event.channelID);
                     */
-                    cout << (char*)event.packet->data << endl;
+
+                    //myMessage += "\n";
+
+                    cout << "\r"<<(char*)event.packet->data << endl;
                     enet_packet_destroy(event.packet);
                     
+                    cout << username;
 
                     /* {
                         SendMessage(username)

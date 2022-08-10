@@ -77,16 +77,19 @@ bool CreateServer()
     return server != nullptr;
 }
 
+string myMessage;
+
 void MessageSend(string username)
 {
-    string myMessage;
+    //string myMessage;
 
     while (1)
     {
         cout << username;
+        //getline(cin, myMessage, '\n');
         getline(cin, myMessage);
         myMessage.insert(0, username);
-        myMessage += "\n";
+        myMessage.insert(0,"\r");
 
         /* Create a reliable packet of size 7 containing "packet\0" */
         ENetPacket* packet = enet_packet_create(myMessage.c_str(),
@@ -144,11 +147,12 @@ int main(int argc, char** argv)
                 switch (event.type)
                 {
                     case ENET_EVENT_TYPE_CONNECT:
-                        cout << "A new client connected from "
+                        cout << "\rA new client connected from "
                             << event.peer->address.host
                             << ":" << event.peer->address.port
                             << endl;
                         /* Store any relevant client information here. */
+                        cout << serverName;
                         event.peer->data = (void*)("Client information");
 
                         // added scope because you can't create things in a case statement
@@ -169,15 +173,22 @@ int main(int argc, char** argv)
                         break;
 
                     case ENET_EVENT_TYPE_RECEIVE:
+                        // save what I was typing
+                        //myMessage
+                        // move cursor to start of current line
+                        // 
+                        // print received data
+                        // print what I saved
                         /*cout << "A packet of length "
                             << event.packet->dataLength << endl
                             << "containing " << (char*)event.packet->data
                             << endl;
                             */
-                        cout << (char*)event.packet->data << endl;
+                        cout << "\r"<<(char*)event.packet->data << endl;
                     /* Clean up the packet now that we're done using it. */
                         enet_packet_destroy(event.packet);
-
+                        
+                        cout << serverName;
                         break;
 
                     case ENET_EVENT_TYPE_DISCONNECT:
