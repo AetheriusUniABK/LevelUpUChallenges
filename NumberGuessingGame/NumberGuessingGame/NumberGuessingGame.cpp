@@ -23,13 +23,15 @@ thread* PacketThread = nullptr;
 
 int numPlayers = 0;
 bool canGuess = false;
+int playerNumber = 1;
+int randomNum;
 
 enum PacketHeaderTypes
 {
     PHT_Invalid = 0,
     PHT_IsCorrect,
-    PHT_Position,
-    PHT_Count
+    PHT_Guess,
+    PHT_Count,
 };
 
 struct GamePacket
@@ -50,16 +52,15 @@ struct IsCorrectPacket : public GamePacket
     bool IsCorrect = false;
 };
 
-struct PositionPacket : public GamePacket
+struct GuessPacket : public GamePacket
 {
-    PositionPacket()
+    GuessPacket()
     {
-        Type = PHT_Position;
+        Type = PHT_Guess;
     }
 
     int playerId = 0;
-    int x = 0;
-    int y = 0;
+    int guess = 0;
 };
 
 //can pass in a peer connection if wanting to limit
@@ -109,14 +110,34 @@ void HandleReceivePacket(const ENetEvent& event)
         // add switch for packet types
         // or if statements for each packet type
 
+        // let player know if they're correct or not
         if (RecGamePacket->Type == PHT_IsCorrect)
         {
-            cout << "u dead?" << endl;
-            IsCorrectPacket* DeadGamePacket = (IsCorrectPacket*)(event.packet->data);
-            if (DeadGamePacket)
+            cout << "Your guess was ";
+            IsCorrectPacket* CorrectPacket = (IsCorrectPacket*)(event.packet->data);
+            if (CorrectPacket)
             {
-                string response = (DeadGamePacket->IsCorrect ? "yeah" : "no");
+                string response = (CorrectPacket->IsCorrect ? "correct :)" : "incorrect :(");
                 cout << response << endl;
+            }
+        }
+        // get player's guess
+        if (RecGamePacket->Type == PHT_Guess)
+        {
+            GuessPacket* guessPacket = (GuessPacket*)(event.packet->data);
+            if (guessPacket)
+            {
+                cout << "Player " << guessPacket->playerId << " guessed: " << guessPacket->guess << endl;
+                if (guessPacket->guess == randomNum)
+                {
+                    // send a PHT_IsCorrect packet to the player that says their guess was right
+                    // send a packet saying the game is over
+                    // stop allowing players to send packets
+                }
+                else
+                {
+                    // send a PHT_IsCorrect packet to the player that says their guess was wrong
+                }
             }
         }
     }
@@ -135,9 +156,9 @@ void HandleReceivePacket(const ENetEvent& event)
 // sends packet function
 void BroadcastIsCorrectPacket()
 {
-    IsCorrectPacket* DeadPacket = new IsCorrectPacket();
-    DeadPacket->IsCorrect = true;
-    ENetPacket* packet = enet_packet_create(DeadPacket,
+    IsCorrectPacket* isCorrectPacket = new IsCorrectPacket();
+    isCorrectPacket->IsCorrect = true;
+    ENetPacket* packet = enet_packet_create(isCorrectPacket,
         sizeof(IsCorrectPacket),
         ENET_PACKET_FLAG_RELIABLE);
 
@@ -148,7 +169,7 @@ void BroadcastIsCorrectPacket()
     /* One could just use enet_host_service() instead. */
     //enet_host_service();
     enet_host_flush(NetHost);
-    delete DeadPacket;
+    delete isCorrectPacket;
 }
 
 // creates the random number
@@ -200,6 +221,7 @@ void ServerProcessPackets()
 // 
 void ClientProcessPackets()
 {
+
     while (1)
     {
         ENetEvent event;
@@ -240,7 +262,7 @@ int main(int argc, char** argv)
     {
         // initialize random number for game
         // from 1 to 100 inclusive
-        int randomNum = rand() % 100 + 1;
+        randomNum = rand() % 100 + 1;
         
         //How many players?
         // We always only want 2 players
